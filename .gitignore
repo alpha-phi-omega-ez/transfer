@@ -1,0 +1,6 @@
+data/
+db/
+venv/
+*.json
+*.csv
+*.DS_Store
