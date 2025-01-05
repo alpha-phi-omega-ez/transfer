@@ -4,24 +4,24 @@ from datetime import datetime
 
 from pymongo import MongoClient
 
-laf_types = [
-    "Attire",
-    "Bags",
-    "Chargers & Cables",
-    "Electronics",
-    "Flash Drives",
-    "Glasses",
-    "Headphones",
-    "Jewelery",
-    "Keys",
-    "Miscellaneous Items",
-    "Notepads, Papers, Books, Folders",
-    "Purses & Wallets",
-    "Umbrellas",
-    "Water Bottle",
-]
+laf_types = (
+    ("Attire", "A"),
+    ("Bags", "B"),
+    ("Chargers & Cables", "C"),
+    ("Electronics", "E"),
+    ("Glasses", "G"),
+    ("Headphones", "H"),
+    ("Jewelery", "J"),
+    ("Keys", "K"),
+    ("Miscellaneous Items", "M"),
+    ("Notepads, Papers, Books, Folders", "P"),
+    ("Umbrellas", "U"),
+    ("USB Devices", "F"),
+    ("Wallets & Purses", "I"),
+    ("Water Bottle", "W"),
+)
 
-laf_locations = [
+laf_locations = (
     "87 Gym",
     "Academy Hall",
     "Alumni House",
@@ -52,7 +52,7 @@ laf_locations = [
     "VCC",
     "Walker Laboratory",
     "West Hall",
-]
+)
 
 top_laf_num = 3720  # 3720 is the top number of LAFs in the database
 
@@ -93,9 +93,9 @@ type_mapping = {
     3: "Chargers & Cables",
     4: "Miscellaneous Items",
     5: "Electronics",
-    6: "Flash Drives",
+    6: "USB Devices",
     7: "Glasses",
-    8: "Purses & Wallets",
+    8: "Wallets & Purses",
     9: "Jewelery",
     10: "Keys",
     11: "Miscellaneous Items",
@@ -116,13 +116,27 @@ def main(db_stuff) -> None:
     laf_locations_collection = db["laf_locations"]
     lost_reports_collection = db["lost_reports"]
 
+    laf_types_data = {}
+
     if db_stuff:
 
         # Set id number
         laf_id_collection.insert_one({"_id": "laf_id", "seq": top_laf_num})
 
         # Insert laf_types into laf_types_collection
-        laf_types_collection.insert_many([{"type": laf_type} for laf_type in laf_types])
+        laf_types_collection.insert_many(
+            [
+                {
+                    "type": laf_type[0],
+                    "view": True,
+                    "letter": laf_type[1],
+                }
+                for laf_type in laf_types
+            ]
+        )
+
+        for new_type in laf_types_collection.find():
+            laf_types_data[new_type["type"]] = new_type["_id"]
 
         # Insert laf_locations into laf_locations_collection
         laf_locations_collection.insert_many(
@@ -156,7 +170,7 @@ def main(db_stuff) -> None:
                 "_id": int(row["itemId"]),
                 "description": row["description"],
                 "date": row["foundTime"],
-                "type": item_type,
+                "type_id": laf_types_data[item_type],
                 "location": location_mapping[int(row["locationId"])],
                 "created": row["foundTime"],
                 "archived": archived,
@@ -218,7 +232,7 @@ def main(db_stuff) -> None:
             lost_report_item = {
                 "description": row["description"],
                 "date": row["lostTime"],
-                "type": item_type,
+                "type_id": laf_types_data[item_type],
                 "location": location,
                 "created": row["lostTime"],
                 "archived": archived,
